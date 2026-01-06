@@ -1,0 +1,41 @@
+[project]
+name = "landing-page"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django==5.0.3",
+    "djangorestframework>=3.16.1",
+    "drf-spectacular>=0.29.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-debug-toolbar>=6.1.0",
+    "ruff>=0.14.10",
+]
+prod = [
+    "gunicorn>=23.0.0",
+    "whitenoise>=6.11.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = ["E501"] # line-length 무시 (Formatter가 처리)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
