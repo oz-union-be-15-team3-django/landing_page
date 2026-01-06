@@ -3,10 +3,11 @@ name = "landing-page"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "django==5.0.3",
     "djangorestframework>=3.16.1",
+    "djangorestframework-simplejwt>=5.5.1",
     "drf-spectacular>=0.29.0",
 ]
 
