@@ -34,7 +34,7 @@ select = [
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
 ]
-ignore = ["E501"] # line-length 무시 (Formatter가 처리)
+ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'drf_spectacular',
+    'apps.users',
 ]
 
 MIDDLEWARE = [
@@ -133,3 +134,5 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': '오즈코딩스쿨 Django 미니 프로젝트 API 문서입니다.',
     'VERSION': '1.0.0',
 }
+
+AUTH_USER_MODEL = 'users.CustomUser'
