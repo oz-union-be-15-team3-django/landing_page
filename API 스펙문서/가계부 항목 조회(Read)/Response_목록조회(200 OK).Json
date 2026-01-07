@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "date": "2026-01-05",
+    "category": "식비",
+    "type": "expense",
+    "amount": 10000,
+    "memo": "점심식사",
+    "created_at": "2026-01-05T11:00:00Z"
+  },
+  {
+    "id": 2,
+    "date": "2026-01-05",
+    "category": "급여",
+    "type": "income",
+    "amount": 1500000,
+    "memo": "월급",
+    "created_at": "2026-01-05T09:00:00Z"
+  }
+]

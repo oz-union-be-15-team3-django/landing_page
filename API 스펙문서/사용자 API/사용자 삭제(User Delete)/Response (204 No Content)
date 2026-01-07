@@ -1,0 +1,4 @@
+Endpoint: /api/user/me/
+Method: DELETE
+Header: Authorization: Bearer <access_token>
+Response (204 No Content)

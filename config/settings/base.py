@@ -1,9 +1,25 @@
+import os
+from datetime import timedelta
 from pathlib import Path
+
+import environ
 
 # BASE_DIR 경로 설정
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = "django-insecure-mo4i2xhd()u_nlwy+$axg)i3-&^dfp^lf4d5o3-*@lyv)0-*vu"
+# environ 초기화
+env = environ.Env(
+    # 기본값 설정 (선택 사항, 프로덕션에서는 False 권장)
+    DEBUG=(bool, False)
+)
+
+# .env 파일 읽기
+ENV_FILE = BASE_DIR / ".env"
+if os.path.exists(ENV_FILE):
+    environ.Env.read_env(str(ENV_FILE))
+
+# 보안 키 설정
+SECRET_KEY = env("SECRET_KEY")
 DEBUG = False
 ALLOWED_HOSTS = []
 
@@ -17,10 +33,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party apps
     "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
     "drf_spectacular",
     # Own apps
     "apps.users",
     "apps.accounts",
+    "apps.categories",
+    "apps.transactions",
 ]
 
 MIDDLEWARE = [
@@ -83,6 +104,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # DRF & Spectacular
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_PAGINATION_CLASS": [
+        "rest_framework.pagination.PageNumberPagination",
+    ],
+    "PAGE_SIZE": 20,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -90,6 +121,33 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "오즈코딩스쿨 Django 미니 프로젝트 API 문서입니다.",
     "VERSION": "1.0.0",
 }
+
+# SimpleJWT 설정
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
+
+# CORS 설정
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# Debug Toolbar 설정
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 # Custom User Model
 AUTH_USER_MODEL = "users.CustomUser"
