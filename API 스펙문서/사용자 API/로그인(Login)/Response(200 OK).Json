@@ -1,0 +1,8 @@
+{
+  "token": "jwt_or)session_token_here",
+  "user": {
+    "id": 1,
+    "username": "account_user",
+    "email": "newuser@example.com"
+  }
+}
