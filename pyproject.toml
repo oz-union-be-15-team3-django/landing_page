@@ -3,10 +3,11 @@ name = "landing-page"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "django==5.0.3",
     "djangorestframework>=3.16.1",
+    "djangorestframework-simplejwt>=5.5.1",
     "drf-spectacular>=0.29.0",
 ]
 
@@ -34,7 +35,7 @@ select = [
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
 ]
-ignore = ["E501"] # line-length 무시 (Formatter가 처리)
+ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
