@@ -23,8 +23,8 @@ prod = [
 ]
 
 [tool.ruff]
-line-length = 88
 target-version = "py312"
+line-length = 88
 
 [tool.ruff.lint]
 select = [
@@ -37,6 +37,9 @@ select = [
     "UP",  # pyupgrade
 ]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/settings/*.py" = ["F403", "F405"]
 
 [tool.ruff.format]
 quote-style = "double"
