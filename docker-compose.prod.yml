@@ -4,7 +4,6 @@ services:
     restart: always
     env_file:
       - .env
-      - .env.dev
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -19,7 +18,6 @@ services:
     command: ./scripts/run.sh
     env_file:
       - .env
-      - .env.dev
     ports:
       - "8000:8000"
     depends_on:
@@ -28,6 +26,7 @@ services:
       - .:/app
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.local
+      - DEBUG=${DEBUG}
 
 volumes:
   postgres_data:
