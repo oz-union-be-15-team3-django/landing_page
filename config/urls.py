@@ -16,4 +16,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # apps
     path("users/", include("apps.users.urls")),
+    path("notifications/", include("apps.notification.urls")),
 ]
