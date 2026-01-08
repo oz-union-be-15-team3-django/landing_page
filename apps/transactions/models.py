@@ -29,7 +29,9 @@ class Transaction(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions"
     )  # 사용자id
-    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
+    transaction_type = models.CharField(
+        max_length=10, choices=TRANSACTION_TYPE_CHOICES, default="deposit"
+    )
     amount = models.DecimalField(
         max_digits=15, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))]
     )
