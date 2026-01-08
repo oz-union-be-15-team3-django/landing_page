@@ -4,6 +4,15 @@ from rest_framework import serializers
 from ..users.models import CustomUser
 
 
+class UserSerializer(serializers.ModelSerializer):
+    """기본 유저 정보 시리얼라이저"""
+
+    class Meta:
+        model = CustomUser
+        fields = ("id", "email", "nickname", "phone_number", "created_at", "is_active")
+        read_only_fields = ("id", "created_at", "is_active")
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     """회원가입 Serializer"""
 
@@ -27,12 +36,3 @@ class LogoutSerializer(serializers.Serializer):
     """로그아웃(토큰 블랙리스트) 시리얼라이저"""
 
     refresh = serializers.CharField(help_text="무효화할 리프레시 토큰")
-
-
-class UserSerializer(serializers.ModelSerializer):
-    """기본 유저 정보 시리얼라이저"""
-
-    class Meta:
-        model = CustomUser
-        fields = ("id", "email", "nickname", "phone_number", "created_at", "is_active")
-        read_only_fields = ("id", "created_at", "is_active")
