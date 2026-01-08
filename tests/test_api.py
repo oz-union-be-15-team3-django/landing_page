@@ -1,0 +1,1 @@
+from apps.notification.tests import *
