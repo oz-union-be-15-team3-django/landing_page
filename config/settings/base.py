@@ -20,8 +20,8 @@ if os.path.exists(ENV_FILE):
 
 # 보안 키 설정
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = False
-ALLOWED_HOSTS = []
+DEBUG = True
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 # Application definition
 INSTALLED_APPS = [
@@ -111,9 +111,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
-    "DEFAULT_PAGINATION_CLASS": [
-        "rest_framework.pagination.PageNumberPagination",
-    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    
     "PAGE_SIZE": 20,
 }
 
