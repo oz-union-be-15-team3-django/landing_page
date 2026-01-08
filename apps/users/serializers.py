@@ -34,5 +34,5 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ("id", "email", "nickname", "phone_number", "date_joined", "is_active")
-        read_only_fields = ("id", "date_joined", "is_active")
+        fields = ("id", "email", "nickname", "phone_number", "created_at", "is_active")
+        read_only_fields = ("id", "created_at", "is_active")
