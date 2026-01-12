@@ -1,50 +1,47 @@
-from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from .models import Account
 from .serializers import AccountDetailSerializer, AccountSerializer
 
 
-class AccountListCreateView(ListCreateAPIView):
+@extend_schema_view(
+    get=extend_schema(summary="내 계좌 목록 조회"),
+    post=extend_schema(summary="새 계좌 등록"),
+)
+class AccountListCreateView(generics.ListCreateAPIView):
     """계좌 목록 조회 및 생성 API"""
 
-    permission_classes = [IsAuthenticated]
     serializer_class = AccountSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Account.objects.filter(
-            user=self.request.user, is_active=True
-        ).select_related("user")
+        return Account.objects.filter(user=self.request.user, is_active=True).order_by(
+            "-created_at"
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
 
-class AccountDetailView(RetrieveUpdateDestroyAPIView):
-    """계좌 상세 조회 및 삭제 API - 수정 불가"""
+@extend_schema_view(
+    get=extend_schema(summary="계좌 상세 조회"),
+    patch=extend_schema(summary="계좌 정보 일부 수정"),
+    put=extend_schema(summary="계좌 정보 전체 수정"),
+    delete=extend_schema(summary="계좌 삭제"),
+)
+class AccountDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """계좌 상세 정보 조회, 수정, 삭제 API"""
 
     permission_classes = [IsAuthenticated]
-    serializer_class = AccountDetailSerializer
 
     def get_queryset(self):
-        return Account.objects.filter(
-            user=self.request.user, is_active=True
-        ).select_related("user")
+        return Account.objects.filter(user=self.request.user)
 
-    def update(self, request, *args, **kwargs):
-        return Response(
-            {"error": "Account information cannot be modified after creation"},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    def partial_update(self, request, *args, **kwargs):
-        return Response(
-            {"error": "Account information cannot be modified after creation"},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    def perform_destroy(self, instance):
-        instance.is_active = False
-        instance.save(update_fields=["is_active"])
+    def get_serializer_class(self):
+        # 조회(GET) 요청일 때는 ReadOnly 시리얼라이저를 사용
+        if self.request.method == "GET":
+            return AccountDetailSerializer
+        # 그 외 요청일 때는 수정이 가능한 시리얼라이저를 사용
+        return AccountSerializer

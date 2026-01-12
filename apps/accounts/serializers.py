@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Account
@@ -6,7 +7,7 @@ from .models import Account
 class AccountSerializer(serializers.ModelSerializer):
     """계좌 Serializer (목록 및 생성용)"""
 
-    user_email = serializers.EmailField(source="user.email", read_only=True)
+    # user_email = serializers.EmailField(source="user.email", read_only=True)
     masked_account_number = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -14,32 +15,33 @@ class AccountSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "user",
-            "user_email",
+            # "user_email",
             "account_number",
             "masked_account_number",
             "account_name",
             "bank_name",
             "balance",
             "is_active",
-            "created_at",
-            "updated_at",
+            # "created_at",
+            # "updated_at",
         )
         read_only_fields = (
             "id",
             "user",
             "balance",
             "is_active",
-            "created_at",
-            "updated_at",
+            # "created_at",
+            # "updated_at",
         )
 
     def validate_account_number(self, value):
         """계좌번호 중복 검증"""
-        if Account.objects.filter(account_number=value).exists():
+        if not self.instance and Account.objects.filter(account_number=value).exists():
             raise serializers.ValidationError("이미 존재하는 계좌번호입니다.")
         return value
 
-    def get_masked_account_number(self, obj):
+    @extend_schema_field(serializers.CharField)
+    def get_masked_account_number(self, obj) -> str:
         return self._mask_account_number(obj.account_number)
 
     def to_representation(self, instance):
@@ -52,54 +54,15 @@ class AccountSerializer(serializers.ModelSerializer):
         # 앞 4자리 외 나머지를 * 처리 (길이가 짧을 경우 대비)
         if not account_number:
             return ""
-        prefix = account_number[:4]
-        return prefix + "*" * max(len(account_number) - 4, 0)
+        return account_number[:4] + "*" * max(len(account_number) - 4, 0)
 
 
-class AccountDetailSerializer(serializers.ModelSerializer):
+class AccountDetailSerializer(AccountSerializer):
     """계좌 상세 Serializer (조회용)"""
 
-    user_email = serializers.EmailField(source="user.email", read_only=True)
-    masked_account_number = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Account
-        fields = (
-            "id",
-            "user",
-            "user_email",
+    class Meta(AccountSerializer.Meta):
+        read_only_fields = AccountSerializer.Meta.read_only_fields + (
             "account_number",
-            "masked_account_number",
             "account_name",
             "bank_name",
-            "balance",
-            "is_active",
-            "created_at",
-            "updated_at",
         )
-        read_only_fields = (
-            "id",
-            "user",
-            "account_number",
-            "masked_account_number",
-            "account_name",
-            "bank_name",
-            "balance",
-            "is_active",
-            "created_at",
-            "updated_at",
-        )
-
-    def get_masked_account_number(self, obj):
-        return self._mask_account_number(obj.account_number)
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["account_number"] = self._mask_account_number(instance.account_number)
-        return data
-
-    def _mask_account_number(self, account_number: str) -> str:
-        if not account_number:
-            return ""
-        prefix = account_number[:4]
-        return prefix + "*" * max(len(account_number) - 4, 0)
