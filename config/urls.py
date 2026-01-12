@@ -12,9 +12,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # drf-spectacular
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
-    path(
-        "swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"
-    ),
+    path("swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),  # noqa
     path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # apps
     path("users/", include("apps.users.urls")),
