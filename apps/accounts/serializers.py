@@ -1,4 +1,3 @@
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Account
@@ -7,31 +6,26 @@ from .models import Account
 class AccountSerializer(serializers.ModelSerializer):
     """계좌 Serializer (목록 및 생성용)"""
 
-    # user_email = serializers.EmailField(source="user.email", read_only=True)
-    masked_account_number = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = Account
         fields = (
             "id",
             "user",
-            # "user_email",
             "account_number",
-            "masked_account_number",
             "account_name",
             "bank_name",
             "balance",
             "is_active",
-            # "created_at",
-            # "updated_at",
+            "created_at",
+            "updated_at",
         )
         read_only_fields = (
             "id",
             "user",
             "balance",
             "is_active",
-            # "created_at",
-            # "updated_at",
+            "created_at",
+            "updated_at",
         )
 
     def validate_account_number(self, value):
@@ -40,21 +34,24 @@ class AccountSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("이미 존재하는 계좌번호입니다.")
         return value
 
-    @extend_schema_field(serializers.CharField)
-    def get_masked_account_number(self, obj) -> str:
-        return self._mask_account_number(obj.account_number)
-
     def to_representation(self, instance):
-        """출력 시 계좌번호를 마스킹한다."""
+        """출력 시 계좌번호를 마스킹"""
         data = super().to_representation(instance)
-        data["account_number"] = self._mask_account_number(instance.account_number)
+
+        is_masking_on = self.context.get("masking", True)
+
+        if is_masking_on:
+            data["account_number"] = self._mask_account_number(instance.account_number)
+        else:
+            data["account_number"] = instance.account_number
         return data
 
     def _mask_account_number(self, account_number: str) -> str:
-        # 앞 4자리 외 나머지를 * 처리 (길이가 짧을 경우 대비)
         if not account_number:
             return ""
-        return account_number[:4] + "*" * max(len(account_number) - 4, 0)
+        return account_number[:4] + "*" * max(
+            len(account_number) - 4, 0
+        )  # 앞 4자리 외 나머지를 * 처리
 
 
 class AccountDetailSerializer(AccountSerializer):
