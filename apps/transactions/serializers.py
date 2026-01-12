@@ -1,6 +1,5 @@
+from django.db import transaction
 from rest_framework import serializers
-
-from apps.accounts.serializers import AccountSerializer
 
 from .models import Transaction
 
@@ -8,92 +7,139 @@ from .models import Transaction
 class TransactionSerializer(serializers.ModelSerializer):
     """거래내역 Serializer"""
 
-    account_detail = AccountSerializer(source="account", read_only=True)
-    transaction_type_display = serializers.CharField(
-        source="get_transaction_type_display", read_only=True
+    account_name = serializers.CharField(source="account.account_name", read_only=True)
+    to_account_name = serializers.CharField(
+        source="to_account.account_name", read_only=True
     )
+    bank_name = serializers.CharField(source="account.bank_name", read_only=True)
 
     class Meta:
         model = Transaction
         fields = (
             "id",
-            "account",
-            "account_detail",
             "user",
+            "account",
+            "account_name",
+            "to_account",
+            "to_account_name",
+            "bank_name",
             "transaction_type",
-            "transaction_type_display",
             "amount",
+            "currency",
+            "balance_after_transaction",
+            "category",
             "description",
-            "transaction_date",
+            "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "user", "transaction_date", "updated_at")
+        read_only_fields = ("id", "user", "balance_after_transaction", "created_at")
 
-    def validate(self, attrs):
-        account = attrs.get("account")
-        transaction_type = attrs.get("transaction_type")
-        amount = attrs.get("amount")
-        request = self.context.get("request")
+    def validate(self, data):
+        """계좌 소유권 및 잔액 검증"""
+        user = self.context["request"].user
+        account = data.get("account", getattr(self.instance, "account", None))
+        t_type = data.get(
+            "transaction_type", getattr(self.instance, "transaction_type", None)
+        )
+        amount = data.get("amount", getattr(self.instance, "amount", 0))
 
-        if request and account and account.user_id != request.user.id:
+        if not account:
+            raise serializers.ValidationError("계좌 정보가 필요합니다.")
+
+        # 계좌 소유권 확인
+        if account.user != user:
             raise serializers.ValidationError(
-                {"account": "본인 계좌로만 거래할 수 있습니다."}
+                "본인 소유의 계좌에서만 거래가 가능합니다."
             )
 
-        if account and not account.is_active:
-            raise serializers.ValidationError({"account": "비활성화된 계좌입니다."})
+        # 출금 시 잔액 부족 확인
+        if t_type in [
+            Transaction.TransactionType.WITHDRAWAL,
+            Transaction.TransactionType.TRANSFER,
+        ]:
+            current_balance = account.balance
+            if self.instance and self.instance.account == account:
+                current_balance += (
+                    self.instance.amount
+                    if self.instance.transaction_type
+                    != Transaction.TransactionType.DEPOSIT
+                    else -self.instance.amount
+                )
 
-        if transaction_type == "withdrawal" and account.balance < amount:
-            raise serializers.ValidationError({"amount": "계좌 잔액이 부족합니다."})
+            if current_balance < amount:
+                raise serializers.ValidationError("계좌 잔액이 부족합니다.")
 
-        return attrs
+        # 이체 시 검증
+        if t_type == Transaction.TransactionType.TRANSFER:
+            to_account = data.get(
+                "to_account", getattr(self.instance, "to_account", None)
+            )
+            if not to_account:
+                raise serializers.ValidationError(
+                    {"to_account": "이체 시 입금 계좌 선택은 필수입니다."}
+                )
+            if to_account == account:
+                raise serializers.ValidationError(
+                    {"to_account": "동일한 계좌로 이체할 수 없습니다."}
+                )
+            if to_account.user != user:
+                raise serializers.ValidationError(
+                    {"to_account": "본인 소유의 계좌로만 이체할 수 있습니다."}
+                )
 
+        return data
 
-class TransactionDetailSerializer(serializers.ModelSerializer):
-    """거래내역 상세 Serializer"""
+    @transaction.atomic
+    def create(self, validated_data):
+        """거래 생성 시 잔액 반영"""
+        instance = Transaction(**validated_data)
+        self._update_account_balance(instance, mode="create")
+        instance.balance_after_transaction = instance.account.balance
+        instance.save()
+        return instance
 
-    account_detail = AccountSerializer(source="account", read_only=True)
-    transaction_type_display = serializers.CharField(
-        source="get_transaction_type_display", read_only=True
-    )
-    user_email = serializers.EmailField(source="user.email", read_only=True)
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        """거래 수정 시 잔액 재계산 로직"""
+        # 1. 기존 거래 효과 되돌리기 (Revert)
+        self._update_account_balance(instance, mode="delete")
 
-    class Meta:
-        model = Transaction
-        fields = (
-            "id",
-            "account",
-            "account_detail",
-            "user",
-            "user_email",
-            "transaction_type",
-            "transaction_type_display",
-            "amount",
-            "description",
-            "transaction_date",
-            "updated_at",
-        )
-        read_only_fields = ("id", "account", "user", "transaction_date", "updated_at")
+        # 2. 데이터 업데이트
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
 
-    def validate(self, attrs):
-        instance = self.instance
-        if instance and not instance.account.is_active:
-            raise serializers.ValidationError({"account": "비활성화된 계좌입니다."})
-        if instance:
-            transaction_type = attrs.get("transaction_type", instance.transaction_type)
-            amount = attrs.get("amount", instance.amount)
-            account = instance.account
+        # 3. 새로운 거래 효과 적용 (Apply)
+        self._update_account_balance(instance, mode="create")
 
-            if transaction_type == "withdrawal":
-                current_balance = account.balance
-                if instance.transaction_type == "deposit":
-                    current_balance -= instance.amount
-                else:
-                    current_balance += instance.amount
+        # 4. 거래 후 잔액 기록 및 저장
+        instance.balance_after_transaction = instance.account.balance
+        instance.save()
+        return instance
 
-                if current_balance < amount:
-                    raise serializers.ValidationError(
-                        {"amount": "계좌 잔액이 부족합니다."}
-                    )
+    def _update_account_balance(self, transaction_obj, mode="create"):
+        """
+        계좌 잔액 계산 로직
+        mode: 'create' (반영), 'delete' (되돌리기)
+        """
+        account = transaction_obj.account
+        if not account:
+            return
 
-        return attrs
+        to_account = transaction_obj.to_account
+        amount = transaction_obj.amount
+        t_type = transaction_obj.transaction_type
+
+        # 반영할 때는 multiplier가 1, 되돌릴 때는 -1
+        multiplier = 1 if mode == "create" else -1
+
+        if t_type == Transaction.TransactionType.DEPOSIT:
+            account.balance += amount * multiplier
+        elif t_type == Transaction.TransactionType.WITHDRAWAL:
+            account.balance -= amount * multiplier
+        elif t_type == Transaction.TransactionType.TRANSFER:
+            account.balance -= amount * multiplier
+            if to_account:
+                to_account.balance += amount * multiplier
+                to_account.save()
+
+        account.save()
