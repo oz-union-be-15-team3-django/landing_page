@@ -12,7 +12,7 @@ class CustomUserAdmin(UserAdmin):
         "phone_number",
         "is_staff",
         "is_active",
-        "date_joined",
+        "created_at",
     )
 
     search_fields = ("username", "email", "nickname", "phone_number")

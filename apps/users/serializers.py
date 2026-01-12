@@ -4,6 +4,15 @@ from rest_framework import serializers
 from ..users.models import CustomUser
 
 
+class UserSerializer(serializers.ModelSerializer):
+    """기본 유저 정보 시리얼라이저"""
+
+    class Meta:
+        model = CustomUser
+        fields = ("id", "email", "nickname", "phone_number", "created_at", "is_active")
+        read_only_fields = ("id", "created_at", "is_active")
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     """회원가입 Serializer"""
 
@@ -13,7 +22,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ("username", "email", "password")
+        fields = ("username", "email", "password", "nickname", "phone_number")
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -23,57 +32,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-class ProfileSerializer(serializers.ModelSerializer):
-    """프로필 조회 Serializer"""
+class LogoutSerializer(serializers.Serializer):
+    """로그아웃(토큰 블랙리스트) 시리얼라이저"""
 
-    joined_at = serializers.DateTimeField(source="date_joined", read_only=True)
-
-    class Meta:
-        model = CustomUser
-        fields = ("id", "username", "email", "joined_at")
-        read_only_fields = ("id", "username", "email", "joined_at")
-
-
-class ProfileUpdateSerializer(serializers.ModelSerializer):
-    """프로필 수정 Serializer"""
-
-    password = serializers.CharField(
-        write_only=True, required=False, validators=[validate_password]
-    )
-
-    class Meta:
-        model = CustomUser
-        fields = ("email", "password")
-
-    def update(self, instance, validated_data):
-        if "password" in validated_data:
-            password = validated_data.pop("password")
-            instance.set_password(password)
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-        return instance
-
-
-class ProfileUpdateResponseSerializer(serializers.ModelSerializer):
-    """프로필 수정 응답 Serializer"""
-
-    updated_at = serializers.DateTimeField(read_only=True)
-
-    class Meta:
-        model = CustomUser
-        fields = ("id", "username", "email", "updated_at")
-        read_only_fields = ("id", "username", "email", "updated_at")
-
-
-class UserSignupResponseSerializer(serializers.ModelSerializer):
-    """회원가입 응답 Serializer"""
-
-    created_at = serializers.DateTimeField(source="date_joined", read_only=True)
-
-    class Meta:
-        model = CustomUser
-        fields = ("id", "username", "email", "created_at")
-        read_only_fields = ("id", "username", "email", "created_at")
+    refresh = serializers.CharField(help_text="무효화할 리프레시 토큰")

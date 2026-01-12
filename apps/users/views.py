@@ -1,113 +1,115 @@
 from django.contrib.auth import get_user_model
-from rest_framework import status
-from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from ..users.serializers import (
-    ProfileSerializer,
-    ProfileUpdateResponseSerializer,
-    ProfileUpdateSerializer,
+    LogoutSerializer,
     RegisterSerializer,
-    UserSignupResponseSerializer,
+    UserSerializer,
 )
 
 User = get_user_model()
 
 
-class RegisterView(CreateAPIView):
+class RegisterView(generics.CreateAPIView):
     """회원가입 API"""
 
-    queryset = User.objects.all()
     serializer_class = RegisterSerializer
-    permission_classes = []
+    permission_classes = [AllowAny]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        response_serializer = UserSignupResponseSerializer(user)
-        headers = self.get_success_headers(response_serializer.data)
-        return Response(
-            response_serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+    @extend_schema(
+        summary="회원가입",
+        description="새로운 사용자를 등록합니다. 이메일, 비밀번호, 닉네임, 휴대폰 번호가 필요합니다.",
+        responses={
+            201: UserSerializer,
+            400: {"description": "입력 데이터 유효성 검사 실패"},
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class LoginView(TokenObtainPairView):
     """로그인 API"""
 
+    @extend_schema(
+        summary="로그인(토큰 발급)",
+        description="이메일과 비밀번호를 확인하여 Access 토큰과 Refresh 토큰을 발급합니다.",
+        responses={
+            200: {"description": "로그인 성공 및 토큰 발급"},
+            401: {"description": "인증 실패 (이메일 혹은 비밀번호 오류)"},
+        },
+    )
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        user = serializer.user
-        token = serializer.validated_data.get("access")
-
-        return Response(
-            {
-                "token": token,
-                "user": {"id": user.id, "username": user.username, "email": user.email},
-            },
-            status=status.HTTP_200_OK,
-        )
+        return super().post(request, *args, **kwargs)
 
 
-class LogoutView(CreateAPIView):
+class LogoutView(generics.GenericAPIView):
     """로그아웃 API"""
 
     permission_classes = [IsAuthenticated]
+    serializer_class = LogoutSerializer
 
-    def create(self, request, *args, **kwargs):
+    @extend_schema(
+        summary="로그아웃",
+        description="전달받은 리프레시 토큰을 블랙리스트에 등록하여 무효화합니다.",
+        responses={
+            200: {"description": "로그아웃 성공"},
+            400: {"description": "유효하지 않은 토큰 혹은 이미 로그아웃됨"},
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            refresh_token = request.data.get("refresh")
-
-            if refresh_token:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-
+            refresh_token = serializer.validated_data.get("refresh")
+            token = RefreshToken(refresh_token)
+            token.blacklist()
             return Response(
                 {"message": "Successfully logged out"}, status=status.HTTP_200_OK
             )
-
-        except TokenError:
-            return Response(
-                {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as e:
+        except (TokenError, Exception) as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProfileView(RetrieveUpdateDestroyAPIView):
-    """회원정보 조회/수정/삭제 API"""
+@extend_schema_view(
+    get=extend_schema(
+        summary="내 프로필 조회",
+        description="현재 로그인한 사용자의 프로필 정보를 조회합니다.",
+    ),
+    patch=extend_schema(
+        summary="내 프로필 수정",
+        description="사용자의 닉네임이나 휴대폰 번호를 일부 수정합니다.",
+    ),
+    put=extend_schema(
+        summary="내 프로필 수정(전체)",
+        description="사용자의 프로필 정보를 전체 수정합니다.",
+    ),
+    delete=extend_schema(
+        summary="회원 탈퇴",
+        description="현재 로그인한 사용자의 계정을 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+        responses={204: {"description": "탈퇴 성공"}},
+    ),
+)
+class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
+    """내 프로필 RUD API"""
 
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_serializer_class(self):
-        if self.request.method in ["PATCH", "PUT"]:
-            return ProfileUpdateSerializer
-        return ProfileSerializer
-
     def get_object(self):
+        # URL에서 pk를 받지 않고 현재 로그인한 유저 객체를 반환
         return self.request.user
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        response_serializer = ProfileUpdateResponseSerializer(instance)
-        return Response(response_serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response({"message": "Successfully deleted"}, status=status.HTTP_200_OK)
+    def perform_destroy(self, instance):
+        # instance.delete() # hard delete
+        # soft delete 처리
+        instance.is_active = False
+        instance.save()
