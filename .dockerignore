@@ -5,8 +5,8 @@ __pycache__/
 *.pyd
 
 .ruff_cache/
+.pytest_cache/,
 .uv/
-uv.lock
 
 .git
 .gitignore
