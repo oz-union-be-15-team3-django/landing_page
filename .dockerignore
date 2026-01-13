@@ -1,1 +1,15 @@
-.venv
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.ruff_cache/
+.uv/
+uv.lock
+
+.git
+.gitignore
+
+.DS_Store
+Thumbs.db
