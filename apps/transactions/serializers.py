@@ -41,7 +41,6 @@ class TransactionSerializer(serializers.ModelSerializer):
         t_type = data.get(
             "transaction_type", getattr(self.instance, "transaction_type", None)
         )
-        amount = data.get("amount", getattr(self.instance, "amount", 0))
 
         if not account:
             raise serializers.ValidationError("계좌 정보가 필요합니다.")
@@ -51,23 +50,6 @@ class TransactionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "본인 소유의 계좌에서만 거래가 가능합니다."
             )
-
-        # 출금 시 잔액 부족 확인
-        if t_type in [
-            Transaction.TransactionType.WITHDRAWAL,
-            Transaction.TransactionType.TRANSFER,
-        ]:
-            current_balance = account.balance
-            if self.instance and self.instance.account == account:
-                current_balance += (
-                    self.instance.amount
-                    if self.instance.transaction_type
-                    != Transaction.TransactionType.DEPOSIT
-                    else -self.instance.amount
-                )
-
-            if current_balance < amount:
-                raise serializers.ValidationError("계좌 잔액이 부족합니다.")
 
         # 이체 시 검증
         if t_type == Transaction.TransactionType.TRANSFER:

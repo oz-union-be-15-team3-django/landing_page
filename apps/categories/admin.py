@@ -9,11 +9,10 @@ class CategoryAdmin(admin.ModelAdmin):
 
     list_display = [
         "id",
-        "category_name",
+        "name",
         "category_type",
         "user",
         "created_at",
-        "updated_at",
     ]
 
     list_filter = [
@@ -22,11 +21,10 @@ class CategoryAdmin(admin.ModelAdmin):
     ]
 
     search_fields = [
-        "category_name",
+        "name",
         "user__username",
-        "user__email",
     ]
 
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["created_at"]
 
     ordering = ["-created_at"]
