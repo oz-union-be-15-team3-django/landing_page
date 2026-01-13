@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.categories",
     "apps.transactions",
+    "apps.notifications",
+    "apps.analysis",
 ]
 
 MIDDLEWARE = [

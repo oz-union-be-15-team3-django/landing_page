@@ -19,6 +19,8 @@ urlpatterns = [
     path("accounts/", include("apps.accounts.urls")),
     path("transactions/", include("apps.transactions.urls")),
     path("categories/", include("apps.categories.urls")),
+    path("notifications/", include("apps.notifications.urls")),
+    path("analysis/", include("apps.analysis.urls")),
 ]
 
 # Debug Toolbar 설정

@@ -8,7 +8,8 @@ from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.utils import timezone
-from transactions.models import Transaction
+
+from apps.transactions.models import Transaction
 
 from .models import SpendingAnalysis
 

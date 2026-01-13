@@ -7,4 +7,4 @@ class AnalysisConfig(AppConfig):
 
     def ready(self):
         """앱이 준비되면 Celery tasks를 임포트"""
-        import analysis.tasks  # noqa
+        import apps.analysis.tasks  # noqa
